@@ -12,4 +12,5 @@ public class Constant {
 	public final static String msgStudentLoginSuccess = "student.login_success";
 	public final static String msgCourseNotFound = "course_not_found";
 	public final static String msgClassRoomNotFound = "classroom_not_found";
+	public final static String msgForgotPassword = "forgot_password";
 }

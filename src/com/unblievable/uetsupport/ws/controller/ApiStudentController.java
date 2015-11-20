@@ -1,12 +1,24 @@
 package com.unblievable.uetsupport.ws.controller;
 
 import java.util.Date;
+import java.util.Properties;
 
+import javax.mail.Message;
+import javax.mail.MessagingException;
+import javax.mail.PasswordAuthentication;
+import javax.mail.Session;
+import javax.mail.Transport;
+import javax.mail.internet.InternetAddress;
+import javax.mail.internet.MimeMessage;
 import javax.servlet.http.HttpSession;
 
+import org.apache.commons.lang.RandomStringUtils;
+import org.apache.commons.lang.math.RandomUtils;
+import org.hibernate.Criteria;
 import org.hibernate.criterion.Restrictions;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -144,6 +156,28 @@ public class ApiStudentController extends BaseController {
 		return new ResponseObjectDetail<Object>(true, getMessage(Constant.msgSuccess, httpSession), student);
 	}
 	
+	@RequestMapping(value = "/forgot-password", method = RequestMethod.POST)
+	public @ResponseBody ResponseObjectDetail<Object> forgotPassword(HttpSession httpSession,
+			@RequestParam(value = "email", required = true) String email) {
+		Criteria criteria = getSession().createCriteria(Student.class);
+		Student student = (Student) criteria.add(Restrictions
+				.or(Restrictions.eq("email", email), Restrictions.eq("otherEmail", email)))
+				.uniqueResult();
+		if (student == null) {
+			return new ResponseObjectDetail<Object>(false, getMessage(Constant.msgStudentNotFound, httpSession), null);
+		}
+		student.password = RandomStringUtils.randomAlphanumeric(6);
+		studentDao.update(student);
+		try {
+			sendMail("UETSupport@gmail.com", email, "[UETSupport] Forgot password", "Username: " + student.username + "\nReset Password: " + student.password);
+		} catch (Exception e) {
+			return new ResponseObjectDetail<Object>(false, e.getMessage(), null);
+		}
+		return new ResponseObjectDetail<Object>(true, getMessage(Constant.msgForgotPassword, httpSession), null);
+	}
+	
+	
+	
 	@RequestMapping(value = "/profile", method = RequestMethod.GET)
 	public @ResponseBody ResponseObjectDetail<Object> profile(HttpSession httpSession) {
 		if (!checkToken(httpSession)) {
@@ -165,6 +199,40 @@ public class ApiStudentController extends BaseController {
 			student.classRoom = classRoom;
 		}
 		return new ResponseObjectDetail<Object>(true, getMessage(Constant.msgSuccess, httpSession), student);
+	}
+	
+	@RequestMapping(value = "/logout", method = RequestMethod.POST)
+	public @ResponseBody ResponseObjectDetail<Object> logout(HttpSession httpSession) {
+		if (!checkToken(httpSession)) {
+			return new ResponseObjectDetail<Object>(false, getMessage(Constant.msgInvalidToken, httpSession), null);
+		}
+		getSession().delete(token);
+		return new ResponseObjectDetail<Object>(true, getMessage(Constant.msgSuccess, httpSession), null);
+	}
+	
+	public void sendMail(String from, String to, String subject, String msg) throws Exception {
+		final String username = "ducanh.uet@gmail.com";
+		final String password = "euelfpiljjlcyziz";
+		Properties props = new Properties();
+		props.put("mail.smtp.auth", "true");
+		props.put("mail.smtp.starttls.enable", "true");
+		props.put("mail.smtp.host", "smtp.gmail.com");
+		props.put("mail.smtp.port", "587");
+		 
+		Session session = Session.getInstance(props,
+				  new javax.mail.Authenticator() {
+					protected PasswordAuthentication getPasswordAuthentication() {
+						return new PasswordAuthentication(username, password);
+					}
+				  });
+	
+		Message message = new MimeMessage(session);
+		message.setFrom(new InternetAddress(from));
+		message.setRecipients(Message.RecipientType.TO,
+			InternetAddress.parse(to));
+		message.setSubject(subject);
+		message.setText(msg);
+		Transport.send(message);
 	}
 	
 }
