@@ -69,6 +69,10 @@ public class Student  {
 	@ElementCollection(targetClass = Schedule.class)
 	public Collection<Schedule> schedules;
 	
+	@LazyCollection(LazyCollectionOption.FALSE)
+	@ElementCollection(targetClass = Reminder.class)
+	public Collection<Reminder> reminders;
+	
 	@Column(name = "createdTime")
 	@JsonFormat(shape=JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm:ss 'GMT'Z")
 	public Date createdTime;

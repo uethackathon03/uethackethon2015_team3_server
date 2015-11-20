@@ -34,6 +34,7 @@ import com.unblievable.uetsupport.common.Constant;
 import com.unblievable.uetsupport.dao.StudentDao;
 import com.unblievable.uetsupport.models.ClassRoom;
 import com.unblievable.uetsupport.models.Course;
+import com.unblievable.uetsupport.models.Reminder;
 import com.unblievable.uetsupport.models.Schedule;
 import com.unblievable.uetsupport.models.Student;
 import com.unblievable.uetsupport.respsec.TokenInfo;
@@ -289,7 +290,7 @@ public class ApiStudentController extends BaseController {
 			@RequestParam(value = "dayOfWeek", required = true) String dayOfWeek,
 			@RequestParam(value = "timeFrom", required = true) Long timeFrom,
 			@RequestParam(value = "timeTo", required = true) Long timeTo,
-			@RequestParam(value = "title", required = false, defaultValue = "") String title,
+			@RequestParam(value = "subject", required = false, defaultValue = "") String subject,
 			@RequestParam(value = "note", required = false, defaultValue = "") String note) {
 		if (!checkToken(httpSession)) {
 			return new ResponseObjectDetail<Object>(false, getMessage(Constant.msgInvalidToken, httpSession), null);
@@ -300,19 +301,20 @@ public class ApiStudentController extends BaseController {
 		schedule.dayOfWeek = dayOfWeek;
 		schedule.timeFrom = timeFrom;
 		schedule.timeTo = timeTo;
-		if (CommonUtils.stringIsValid(title)) schedule.title = title;
+		if (CommonUtils.stringIsValid(subject)) schedule.subject = subject;
 		if (CommonUtils.stringIsValid(note)) schedule.note = note;
 		student.schedules.add(schedule);
+		studentDao.update(student);
 		return new ResponseObjectDetail<Object>(true, getMessage(Constant.msgSuccess, httpSession), student);
 	}
 	
 	@RequestMapping(value = "/edit-schedule", method = RequestMethod.POST)
 	public @ResponseBody ResponseObjectDetail<Object> editSchedule(HttpSession httpSession,
 			@RequestParam(value = "ordinalNumbers", required = true) Integer ordinalNumbers,
-			@RequestParam(value = "dayOfWeek", required = true) String dayOfWeek,
-			@RequestParam(value = "timeFrom", required = true) Long timeFrom,
-			@RequestParam(value = "timeTo", required = true) Long timeTo,
-			@RequestParam(value = "title", required = false, defaultValue = "") String title,
+			@RequestParam(value = "dayOfWeek", required = false) String dayOfWeek,
+			@RequestParam(value = "timeFrom", required = false) Long timeFrom,
+			@RequestParam(value = "timeTo", required = false) Long timeTo,
+			@RequestParam(value = "subject", required = false, defaultValue = "") String subject,
 			@RequestParam(value = "note", required = false, defaultValue = "") String note) {
 		if (!checkToken(httpSession)) {
 			return new ResponseObjectDetail<Object>(false, getMessage(Constant.msgInvalidToken, httpSession), null);
@@ -321,15 +323,16 @@ public class ApiStudentController extends BaseController {
 		ArrayList<Schedule> listSchedule = new ArrayList<Schedule>(student.schedules);
 		for (int i = 0; i < listSchedule.size(); i++) {
 			if (listSchedule.get(i).ordinalNumbers == ordinalNumbers) {
-				listSchedule.get(i).dayOfWeek = dayOfWeek;
-				listSchedule.get(i).timeFrom = timeFrom;
-				listSchedule.get(i).timeTo = timeTo;
-				if (CommonUtils.stringIsValid(title)) listSchedule.get(i).title = title;
+				if (dayOfWeek != null) listSchedule.get(i).dayOfWeek = dayOfWeek;
+				if (timeFrom != null) listSchedule.get(i).timeFrom = timeFrom;
+				if (timeTo != null) listSchedule.get(i).timeTo = timeTo;
+				if (CommonUtils.stringIsValid(subject)) listSchedule.get(i).subject = subject;
 				if (CommonUtils.stringIsValid(note)) listSchedule.get(i).note = note;
 			}
 		}
 		student.schedules.clear();
 		student.schedules.addAll(listSchedule);
+		studentDao.update(student);
 		return new ResponseObjectDetail<Object>(true, getMessage(Constant.msgSuccess, httpSession), student);
 	}
 	
@@ -349,6 +352,78 @@ public class ApiStudentController extends BaseController {
 		}
 		student.schedules.clear();
 		student.schedules.addAll(listSchedule);
+		studentDao.update(student);
+		return new ResponseObjectDetail<Object>(true, getMessage(Constant.msgSuccess, httpSession), student);
+	}
+	
+	@RequestMapping(value = "/create-reminder", method = RequestMethod.POST)
+	public @ResponseBody ResponseObjectDetail<Object> createReminder(HttpSession httpSession,
+			@RequestParam(value = "timeReminder", required = true) Long timeReminder,
+			@RequestParam(value = "beforeReminder", required = true) Long beforeReminder,
+			@RequestParam(value = "numberOfReminder", required = true) Integer numberOfReminder,
+			@RequestParam(value = "title", required = false, defaultValue = "") String title,
+			@RequestParam(value = "note", required = false, defaultValue = "") String note) {
+		if (!checkToken(httpSession)) {
+			return new ResponseObjectDetail<Object>(false, getMessage(Constant.msgInvalidToken, httpSession), null);
+		}
+		Student student = studentDao.findStudentById(token.userId);
+		Reminder reminder = new Reminder();
+		reminder.reminderId = student.reminders.size() + 1;
+		reminder.timeReminder = timeReminder;
+		reminder.beforeReminder = beforeReminder;
+		reminder.numberOfReminder = numberOfReminder;
+		if (CommonUtils.stringIsValid(title)) reminder.title = title;
+		if (CommonUtils.stringIsValid(note)) reminder.note = note;
+		student.reminders.add(reminder);
+		studentDao.update(student);
+		return new ResponseObjectDetail<Object>(true, getMessage(Constant.msgSuccess, httpSession), student);
+	}
+	
+	@RequestMapping(value = "/edit-reminder", method = RequestMethod.POST)
+	public @ResponseBody ResponseObjectDetail<Object> editReminder(HttpSession httpSession,
+			@RequestParam(value = "reminderId", required = true) Integer reminderId,
+			@RequestParam(value = "timeReminder", required = false) Long timeReminder,
+			@RequestParam(value = "beforeReminder", required = false) Long beforeReminder,
+			@RequestParam(value = "numberOfReminder", required = false) Integer numberOfReminder,
+			@RequestParam(value = "title", required = false, defaultValue = "") String title,
+			@RequestParam(value = "note", required = false, defaultValue = "") String note) {
+		if (!checkToken(httpSession)) {
+			return new ResponseObjectDetail<Object>(false, getMessage(Constant.msgInvalidToken, httpSession), null);
+		}
+		Student student = studentDao.findStudentById(token.userId);
+		ArrayList<Reminder> listReminder = new ArrayList<Reminder>(student.reminders);
+		for (int i = 0; i < listReminder.size(); i++) {
+			if (listReminder.get(i).reminderId == reminderId) {
+				if (timeReminder != null) listReminder.get(i).timeReminder = timeReminder;
+				if (beforeReminder != null) listReminder.get(i).beforeReminder = beforeReminder;
+				if (numberOfReminder != null) listReminder.get(i).numberOfReminder = numberOfReminder;
+				if (CommonUtils.stringIsValid(title)) listReminder.get(i).title = title;
+				if (CommonUtils.stringIsValid(note)) listReminder.get(i).note = note;
+			}
+		}
+		student.reminders.clear();
+		student.reminders.addAll(listReminder);
+		studentDao.update(student);
+		return new ResponseObjectDetail<Object>(true, getMessage(Constant.msgSuccess, httpSession), student);
+	}
+	
+	@RequestMapping(value = "/remove-reminder", method = RequestMethod.POST)
+	public @ResponseBody ResponseObjectDetail<Object> removeReminder(HttpSession httpSession,
+			@RequestParam(value = "reminderId", required = true) Integer reminderId) {
+		if (!checkToken(httpSession)) {
+			return new ResponseObjectDetail<Object>(false, getMessage(Constant.msgInvalidToken, httpSession), null);
+		}
+		Student student = studentDao.findStudentById(token.userId);
+		ArrayList<Reminder> listReminders = new ArrayList<Reminder>(student.reminders);
+		for (int i = 0; i < listReminders.size(); i++) {
+			if (listReminders.get(i).reminderId == reminderId) {
+				listReminders.remove(i);
+				break;
+			}
+		}
+		student.reminders.clear();
+		student.reminders.addAll(listReminders);
+		studentDao.update(student);
 		return new ResponseObjectDetail<Object>(true, getMessage(Constant.msgSuccess, httpSession), student);
 	}
 		

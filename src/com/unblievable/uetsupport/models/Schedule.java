@@ -9,7 +9,7 @@ public class Schedule {
 	public String dayOfWeek;
 	public Long timeFrom;
 	public Long timeTo;
-	public String title;
+	public String subject;
 	public String note;
 	
 }
