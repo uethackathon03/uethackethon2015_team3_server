@@ -1,6 +1,10 @@
 package com.unblievable.uetsupport.common;
 
 public class Constant {
+	
+	public final static String AVATAR_FOLDER = "avatar";
+	public final static String AVATAR_CONTEXT_PATH = "/upload/photo/avatar/";
+	
 	public final static String msgInvalidToken = "invalid_token";
 	public final static String msgSuccess = "success";
 	public final static String msgCannotInsertDB = "cannot_insert_database";
@@ -13,4 +17,5 @@ public class Constant {
 	public final static String msgCourseNotFound = "course_not_found";
 	public final static String msgClassRoomNotFound = "classroom_not_found";
 	public final static String msgForgotPassword = "forgot_password";
+	public final static String msgNewPasswordCondition = "new_password_condition";
 }

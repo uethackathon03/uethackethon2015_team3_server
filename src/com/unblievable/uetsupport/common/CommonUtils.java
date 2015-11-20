@@ -4,6 +4,8 @@ import java.security.MessageDigest;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.servlet.http.HttpServletRequest;
+
 public class CommonUtils {
 	
 	public static boolean stringIsValid(String s) {
@@ -43,5 +45,12 @@ public class CommonUtils {
 			e.printStackTrace();
 		}
 		return null;
+	}
+	
+	public static String getBaseUrl(HttpServletRequest request) {
+		String baseUrl = String.format("%s://%s:%d%s", request.getScheme(),
+				request.getServerName(), request.getServerPort(),
+				request.getContextPath());
+		return baseUrl;
 	}
 }

@@ -1,24 +1,26 @@
 package com.unblievable.uetsupport.ws.controller;
 
+import java.io.BufferedOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.util.Date;
 import java.util.Properties;
 
 import javax.mail.Message;
-import javax.mail.MessagingException;
 import javax.mail.PasswordAuthentication;
 import javax.mail.Session;
 import javax.mail.Transport;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
+import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 
+import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang.RandomStringUtils;
-import org.apache.commons.lang.math.RandomUtils;
 import org.hibernate.Criteria;
 import org.hibernate.criterion.Restrictions;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -108,7 +110,8 @@ public class ApiStudentController extends BaseController {
 			@RequestParam(value = "daysForIdentityCards", required = false, defaultValue = "") String daysForIdentityCards,
 			@RequestParam(value = "placeForIdentityCards", required = false, defaultValue = "") String placeForIdentityCards,
 			@RequestParam(value = "courseId", required = false) Long courseId,
-			@RequestParam(value = "classId", required = false) Long classId) {
+			@RequestParam(value = "classId", required = false) Long classId,
+			HttpServletRequest request) {
 		if (!checkToken(httpSession)) {
 			return new ResponseObjectDetail<Object>(false, getMessage(Constant.msgInvalidToken, httpSession), null);
 		}
@@ -152,6 +155,33 @@ public class ApiStudentController extends BaseController {
 			student.classId = classId;
 			student.classRoom = classRoom;
 		}
+		
+		if (avatar != null) {
+			if (student.avatar == null) {
+				if (CommonUtils.checkImage(avatar.getOriginalFilename())) {
+					try {
+						byte[] bytes = avatar.getBytes();
+						String nameAvatar = String.valueOf(student.studentId)
+								+ "_"
+								+ String.valueOf(System.currentTimeMillis())
+								+ "." 
+								+ FilenameUtils.getExtension(avatar.getOriginalFilename());
+						File dir = new File(Constant.AVATAR_FOLDER);
+						if (!dir.exists()) {
+							dir.mkdirs();
+						}
+						File serverFile = new File(dir, nameAvatar);
+						BufferedOutputStream stream = new BufferedOutputStream(new FileOutputStream(serverFile));
+		                stream.write(bytes);
+		                stream.close();
+						student.avatar = CommonUtils.getBaseUrl(request) + Constant.AVATAR_CONTEXT_PATH + nameAvatar;
+					} catch (Exception e) {
+						return new ResponseObjectDetail<Object>(false, e.getMessage(), null);
+					}
+				}
+			}
+		}
+		student.modifiedTime = new Date(System.currentTimeMillis());
 		studentDao.update(student);
 		return new ResponseObjectDetail<Object>(true, getMessage(Constant.msgSuccess, httpSession), student);
 	}
@@ -176,7 +206,24 @@ public class ApiStudentController extends BaseController {
 		return new ResponseObjectDetail<Object>(true, getMessage(Constant.msgForgotPassword, httpSession), null);
 	}
 	
-	
+	@RequestMapping(value = "/change-password", method = RequestMethod.POST)
+	public @ResponseBody ResponseObjectDetail<Object> changePassword(HttpSession httpSession,
+			@RequestParam(value = "oldPassword", required = true) String oldPassword,
+			@RequestParam(value = "newPassowrd", required = true) String newPassword) {
+		if (!checkToken(httpSession)) {
+			return new ResponseObjectDetail<Object>(false, getMessage(Constant.msgInvalidToken, httpSession), null);
+		} else if (newPassword.length() > 6) {
+			return new ResponseObjectDetail<Object>(false, getMessage(Constant.msgNewPasswordCondition, httpSession), null);
+		}
+		Student student = studentDao.findStudentById(token.userId);
+		if (!student.password.equals(oldPassword)) {
+			return new ResponseObjectDetail<Object>(false, getMessage(Constant.msgPasswordWrong, httpSession), null);
+		}
+		student.password = newPassword;
+		student.modifiedTime = new Date(System.currentTimeMillis());
+		studentDao.update(student);
+		return new ResponseObjectDetail<Object>(true, getMessage(Constant.msgSuccess, httpSession), null);
+	}
 	
 	@RequestMapping(value = "/profile", method = RequestMethod.GET)
 	public @ResponseBody ResponseObjectDetail<Object> profile(HttpSession httpSession) {
