@@ -1,14 +1,19 @@
 package com.unblievable.uetsupport.models;
 
+import java.util.Collection;
 import java.util.Date;
 
 import javax.persistence.Column;
+import javax.persistence.ElementCollection;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.Table;
 import javax.persistence.Transient;
+
+import org.hibernate.annotations.LazyCollection;
+import org.hibernate.annotations.LazyCollectionOption;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonFormat.Shape;
@@ -59,6 +64,10 @@ public class Student  {
 	
 	@Transient
 	public ClassRoom classRoom;
+	
+	@LazyCollection(LazyCollectionOption.FALSE)
+	@ElementCollection(targetClass = Schedule.class)
+	public Collection<Schedule> schedules;
 	
 	@Column(name = "createdTime")
 	@JsonFormat(shape=JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm:ss 'GMT'Z")

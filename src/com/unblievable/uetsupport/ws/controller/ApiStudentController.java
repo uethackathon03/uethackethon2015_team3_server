@@ -3,6 +3,7 @@ package com.unblievable.uetsupport.ws.controller;
 import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.Properties;
 
@@ -33,6 +34,7 @@ import com.unblievable.uetsupport.common.Constant;
 import com.unblievable.uetsupport.dao.StudentDao;
 import com.unblievable.uetsupport.models.ClassRoom;
 import com.unblievable.uetsupport.models.Course;
+import com.unblievable.uetsupport.models.Schedule;
 import com.unblievable.uetsupport.models.Student;
 import com.unblievable.uetsupport.respsec.TokenInfo;
 import com.unblievable.uetsupport.respsec.TokenManager;
@@ -267,11 +269,11 @@ public class ApiStudentController extends BaseController {
 		props.put("mail.smtp.port", "587");
 		 
 		Session session = Session.getInstance(props,
-				  new javax.mail.Authenticator() {
-					protected PasswordAuthentication getPasswordAuthentication() {
-						return new PasswordAuthentication(username, password);
-					}
-				  });
+			  new javax.mail.Authenticator() {
+				protected PasswordAuthentication getPasswordAuthentication() {
+					return new PasswordAuthentication(username, password);
+				}
+		});
 	
 		Message message = new MimeMessage(session);
 		message.setFrom(new InternetAddress(from));
@@ -282,4 +284,72 @@ public class ApiStudentController extends BaseController {
 		Transport.send(message);
 	}
 	
+	@RequestMapping(value = "/create-schedule", method = RequestMethod.POST)
+	public @ResponseBody ResponseObjectDetail<Object> createSchedule(HttpSession httpSession,
+			@RequestParam(value = "dayOfWeek", required = true) String dayOfWeek,
+			@RequestParam(value = "timeFrom", required = true) Long timeFrom,
+			@RequestParam(value = "timeTo", required = true) Long timeTo,
+			@RequestParam(value = "title", required = false, defaultValue = "") String title,
+			@RequestParam(value = "note", required = false, defaultValue = "") String note) {
+		if (!checkToken(httpSession)) {
+			return new ResponseObjectDetail<Object>(false, getMessage(Constant.msgInvalidToken, httpSession), null);
+		}
+		Student student = studentDao.findStudentById(token.userId);
+		Schedule schedule = new Schedule();
+		schedule.ordinalNumbers = student.schedules.size() + 1;
+		schedule.dayOfWeek = dayOfWeek;
+		schedule.timeFrom = timeFrom;
+		schedule.timeTo = timeTo;
+		if (CommonUtils.stringIsValid(title)) schedule.title = title;
+		if (CommonUtils.stringIsValid(note)) schedule.note = note;
+		student.schedules.add(schedule);
+		return new ResponseObjectDetail<Object>(true, getMessage(Constant.msgSuccess, httpSession), student);
+	}
+	
+	@RequestMapping(value = "/edit-schedule", method = RequestMethod.POST)
+	public @ResponseBody ResponseObjectDetail<Object> editSchedule(HttpSession httpSession,
+			@RequestParam(value = "ordinalNumbers", required = true) Integer ordinalNumbers,
+			@RequestParam(value = "dayOfWeek", required = true) String dayOfWeek,
+			@RequestParam(value = "timeFrom", required = true) Long timeFrom,
+			@RequestParam(value = "timeTo", required = true) Long timeTo,
+			@RequestParam(value = "title", required = false, defaultValue = "") String title,
+			@RequestParam(value = "note", required = false, defaultValue = "") String note) {
+		if (!checkToken(httpSession)) {
+			return new ResponseObjectDetail<Object>(false, getMessage(Constant.msgInvalidToken, httpSession), null);
+		}
+		Student student = studentDao.findStudentById(token.userId);
+		ArrayList<Schedule> listSchedule = new ArrayList<Schedule>(student.schedules);
+		for (int i = 0; i < listSchedule.size(); i++) {
+			if (listSchedule.get(i).ordinalNumbers == ordinalNumbers) {
+				listSchedule.get(i).dayOfWeek = dayOfWeek;
+				listSchedule.get(i).timeFrom = timeFrom;
+				listSchedule.get(i).timeTo = timeTo;
+				if (CommonUtils.stringIsValid(title)) listSchedule.get(i).title = title;
+				if (CommonUtils.stringIsValid(note)) listSchedule.get(i).note = note;
+			}
+		}
+		student.schedules.clear();
+		student.schedules.addAll(listSchedule);
+		return new ResponseObjectDetail<Object>(true, getMessage(Constant.msgSuccess, httpSession), student);
+	}
+	
+	@RequestMapping(value = "/remove-schedule", method = RequestMethod.POST)
+	public @ResponseBody ResponseObjectDetail<Object> removeSchedule(HttpSession httpSession,
+			@RequestParam(value = "ordinalNumbers", required = true) Integer ordinalNumbers) {
+		if (!checkToken(httpSession)) {
+			return new ResponseObjectDetail<Object>(false, getMessage(Constant.msgInvalidToken, httpSession), null);
+		}
+		Student student = studentDao.findStudentById(token.userId);
+		ArrayList<Schedule> listSchedule = new ArrayList<Schedule>(student.schedules);
+		for (int i = 0; i < listSchedule.size(); i++) {
+			if (listSchedule.get(i).ordinalNumbers == ordinalNumbers) {
+				listSchedule.remove(i);
+				break;
+			}
+		}
+		student.schedules.clear();
+		student.schedules.addAll(listSchedule);
+		return new ResponseObjectDetail<Object>(true, getMessage(Constant.msgSuccess, httpSession), student);
+	}
+		
 }
